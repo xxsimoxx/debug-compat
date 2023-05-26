@@ -3,7 +3,7 @@
  * Plugin Name:          Debug Compat
  * Plugin URI:           https://github.com/ClassicPress/debug-compat
  * Description:          Get debug information for Block Compatibility.
- * Version:              0.0.1
+ * Version:              0.0.2
  * License:              GPL2
  * License URI:          https://www.gnu.org/licenses/gpl-2.0.html
  * Author:               ClassicPress
@@ -163,7 +163,6 @@ class debugCompat {
 			}
 		}
 
-		update_option( 'dc_last', $trace );
 		update_option( 'dc_options', $options );
 	}
 
@@ -175,16 +174,6 @@ class debugCompat {
 		$options = get_option( 'dc_options' );
 		var_dump($options);
 		echo'</pre>';
-
-		echo '<a href="#" onClick="jQuery(\'#dc-last\').css(\'display\', \'block\'); return false;">See last trace.</a>';
-		echo '<div id="dc-last" style="display:none;">';
-
-		echo '<h2>Debug (last trace, <code>dc_last</code>)</h2>';
-		echo '<pre>';
-		$trace = get_option( 'dc_last' );
-		var_dump($trace);
-		echo'</pre>';
-		echo '</div>';
 	}
 
 
