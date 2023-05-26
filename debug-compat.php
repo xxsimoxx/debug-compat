@@ -18,23 +18,113 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die;
 }
 
+function myplugin_caching_test() { // ELIMINAMI
+    $result = array(
+        'label'       => __( 'Caching is enabled' ),
+        'status'      => 'good',
+        'badge'       => array(
+            'label' => __( 'Performance' ),
+            'color' => 'orange',
+        ),
+        'description' => sprintf(
+            '<p>%s</p>',
+            __( 'Caching can help load your site more quickly for visitors.' )
+        ),
+        'actions'     => '',
+        'test'        => 'caching_plugin',
+    );
+
+    if ( ! true ) {
+        $result['status'] = 'recommended';
+        $result['label'] = __( 'Caching is not enabled' );
+        $result['description'] = sprintf(
+            '<p>%s</p>',
+            __( 'Caching is not currently enabled on your site. Caching can help load your site more quickly for visitors.' )
+        );
+        $result['actions'] .= sprintf(
+            '<p><a href="%s">%s</a></p>',
+            esc_url( admin_url( 'admin.php?page=cachingplugin&action=enable-caching' ) ),
+            __( 'Enable Caching' )
+        );
+    }
+
+    return $result;
+}
+
+
 class debugCompat {
 
 	public function __construct() {
 		add_action( 'using_block_function', array( $this, 'log' ) );
 		add_action( 'admin_menu', array( $this, 'create_menu' ), 100 );
+		add_filter( 'site_status_tests', array( $this, 'add_site_status_tests' ) );
 		register_deactivation_hook( __FILE__ , array( $this, 'clean_options' ) );
 		register_uninstall_hook( __FILE__ , array( __CLASS__, 'clean_options' ) );
 	}
 
+	public function add_site_status_tests( $tests ) {
+		//var_dump($tests);
+		$tests['direct']['dc_plugins_blocks'] = array(
+			'label' => esc_html__( 'Plugins using block functions', 'debug-compat' ),
+			'test'  => array( $this, 'test_plugin' ),
+		);
+		return $tests;
+	}
+
+	public function test_plugin() {
+		$options = $this->get_options();
+		$result = array(
+			'label'       => esc_html__( 'Plugins using block functions', 'debug-compat' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => 'compatibility',
+				'color' => 'blue',
+			),
+			'description' => sprintf(
+				'<p>%s</p>',
+				 esc_html__( 'No plugins are using block functions.', 'debug-compat' ),
+			),
+			'actions'     => '',
+			'test'        => 'dc_plugins_blocks',
+		);
+		if ( $options['data']['plugins'] === array() ) {
+			return $result;
+		}
+		$result = array(
+			'label'       => esc_html__( 'Plugins using block functions', 'debug-compat' ),
+			'status'      => 'recommended',
+			'badge'       => array(
+				'label' => 'compatibility',
+				'color' => 'orange',
+			),
+			'description' => $this->list_items( $options, 'plugins' ),
+			'actions'     => esc_html__( 'Plugins in this list may not work properly.', 'debug-compat' ),
+			'test'        => 'dc_plugins_blocks',
+		);
+		return $result;
+	}
+
+	private function list_items( $options, $type ) {
+		$response = '';
+		foreach ( $options['data'][$type] as $who => $what ) {
+			$response .= sprintf(
+				'<p><b>%s</b>: %s.</p>',
+				 esc_html( $who ),
+				 implode( ', ', $what)
+			);
+		}
+		return $response;
+	}
+
 	private function get_options() {
 		$default = array(
-			'data' => array(
+			'db_version' => '2',
+			'data'       => array(
 				'themes'        => array(),
 				'parent_themes' => array(),
 				'plugins'       => array(),
 				'misc'          => array(),
-			)
+			),
 		);
 		$options = get_option( 'dc_options', $default );
 		return $options;
