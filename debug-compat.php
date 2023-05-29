@@ -3,7 +3,7 @@
  * Plugin Name:          Debug Compat
  * Plugin URI:           https://github.com/ClassicPress/debug-compat
  * Description:          Get debug information for Block Compatibility.
- * Version:              0.0.2
+ * Version:              0.0.3
  * License:              GPL2
  * License URI:          https://www.gnu.org/licenses/gpl-2.0.html
  * Author:               ClassicPress
@@ -18,55 +18,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die;
 }
 
-function myplugin_caching_test() { // ELIMINAMI
-    $result = array(
-        'label'       => __( 'Caching is enabled' ),
-        'status'      => 'good',
-        'badge'       => array(
-            'label' => __( 'Performance' ),
-            'color' => 'orange',
-        ),
-        'description' => sprintf(
-            '<p>%s</p>',
-            __( 'Caching can help load your site more quickly for visitors.' )
-        ),
-        'actions'     => '',
-        'test'        => 'caching_plugin',
-    );
-
-    if ( ! true ) {
-        $result['status'] = 'recommended';
-        $result['label'] = __( 'Caching is not enabled' );
-        $result['description'] = sprintf(
-            '<p>%s</p>',
-            __( 'Caching is not currently enabled on your site. Caching can help load your site more quickly for visitors.' )
-        );
-        $result['actions'] .= sprintf(
-            '<p><a href="%s">%s</a></p>',
-            esc_url( admin_url( 'admin.php?page=cachingplugin&action=enable-caching' ) ),
-            __( 'Enable Caching' )
-        );
-    }
-
-    return $result;
-}
-
-
 class debugCompat {
 
 	public function __construct() {
+		add_action( 'update_option_blocks_compatibility_level', array( $this, 'clean_options' ), 10, 2 );
+		$blocks_compatibility_level = (int) get_option( 'blocks_compatibility_level', 1 );
+		if ( $blocks_compatibility_level !== 2 ) {
+			// Should do something?
+			return;
+		}
 		add_action( 'using_block_function', array( $this, 'log' ) );
-		add_action( 'admin_menu', array( $this, 'create_menu' ), 100 );
+		add_action( 'admin_menu', array( $this, 'create_menu' ), 100 ); // To be deleted
 		add_filter( 'site_status_tests', array( $this, 'add_site_status_tests' ) );
 		register_deactivation_hook( __FILE__ , array( $this, 'clean_options' ) );
 		register_uninstall_hook( __FILE__ , array( __CLASS__, 'clean_options' ) );
 	}
 
 	public function add_site_status_tests( $tests ) {
-		//var_dump($tests);
 		$tests['direct']['dc_plugins_blocks'] = array(
 			'label' => esc_html__( 'Plugins using block functions', 'debug-compat' ),
 			'test'  => array( $this, 'test_plugin' ),
+		);
+		$tests['direct']['dc_themes_blocks'] = array(
+			'label' => esc_html__( 'Themes using block functions', 'debug-compat' ),
+			'test'  => array( $this, 'test_theme' ),
 		);
 		return $tests;
 	}
@@ -90,6 +65,8 @@ class debugCompat {
 		if ( $options['data']['plugins'] === array() ) {
 			return $result;
 		}
+		$action  = esc_html__( 'Plugins in this list may have issues. ', 'debug-compat' );
+		$action .= ' <a href="https://docs.classicpress.net/user-guides/using-classicpress/site-health-screen/#block-compatibility">' . esc_html__( 'Learn more.', 'debug-compat' ) . '</a>';
 		$result = array(
 			'label'       => esc_html__( 'Plugins using block functions', 'debug-compat' ),
 			'status'      => 'recommended',
@@ -98,8 +75,44 @@ class debugCompat {
 				'color' => 'orange',
 			),
 			'description' => $this->list_items( $options, 'plugins' ),
-			'actions'     => esc_html__( 'Plugins in this list may not work properly.', 'debug-compat' ),
+			'actions'     => $action,
 			'test'        => 'dc_plugins_blocks',
+		);
+		return $result;
+	}
+
+	public function test_theme() {
+		$options = $this->get_options();
+		$result = array(
+			'label'       => esc_html__( 'Themes using block functions', 'debug-compat' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => 'compatibility',
+				'color' => 'blue',
+			),
+			'description' => sprintf(
+				'<p>%s</p>',
+				 esc_html__( 'No themes are using block functions.', 'debug-compat' ),
+			),
+			'actions'     => '',
+			'test'        => 'dc_themes_blocks',
+		);
+		$themes = array_merge(  $options['data']['themes'],  $options['data']['parent_themes'] );
+		if ( $themes === array() ) {
+			return $result;
+		}
+		$action  = esc_html__( 'Themes in this list may have issues. ', 'debug-compat' );
+		$action .= ' <a href="https://docs.classicpress.net/user-guides/using-classicpress/site-health-screen/#block-compatibility">' . esc_html__( 'Learn more.', 'debug-compat' ) . '</a>';
+		$result = array(
+			'label'       => esc_html__( 'Themes using block functions', 'debug-compat' ),
+			'status'      => 'recommended',
+			'badge'       => array(
+				'label' => 'compatibility',
+				'color' => 'orange',
+			),
+			'description' => $this->list_items( $options, 'themes' ) . $this->list_items( $options, 'parent_themes' ),
+			'actions'     => $action,
+			'test'        => 'dc_themes_blocks',
 		);
 		return $result;
 	}
@@ -108,9 +121,16 @@ class debugCompat {
 		$response = '';
 		foreach ( $options['data'][$type] as $who => $what ) {
 			$response .= sprintf(
-				'<p><b>%s</b>: %s.</p>',
+				wp_kses(
+					/* translators: %1$s is the plugin/theme name, %b$s is a comma separated list of functions */
+					'<p><b>%1$s</b> is using: %2$s.</p>',
+					array(
+						'b' => array(),
+						'p' => array(),
+					)
+				),
 				 esc_html( $who ),
-				 implode( ', ', $what)
+				 esc_html( implode( ', ', $what ) )
 			);
 		}
 		return $response;
@@ -166,7 +186,7 @@ class debugCompat {
 		update_option( 'dc_options', $options );
 	}
 
-	public function render_page (){
+	public function render_page (){ // To be deleted
 		echo '<h1>Block Compatibility Inspector <span class="dashicons dashicons-code-standards"></span></h1>';
 
 		echo '<h2>Data (<code>dc_options</code>)</h2>';
@@ -177,7 +197,7 @@ class debugCompat {
 	}
 
 
-	public function create_menu() {
+	public function create_menu() { // To be deleted
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
@@ -192,8 +212,7 @@ class debugCompat {
 	}
 
 	public static function clean_options() {
-		delete_option( 'dc_options' );
-		delete_option( 'dc_last' );
+		// delete_option( 'dc_options' );
 	}
 
 }
