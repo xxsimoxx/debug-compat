@@ -24,7 +24,7 @@ class debugCompat {
 		add_action( 'update_option_blocks_compatibility_level', array( $this, 'clean_options' ), 10, 2 );
 		$blocks_compatibility_level = (int) get_option( 'blocks_compatibility_level', 1 );
 		if ( $blocks_compatibility_level !== 2 ) {
-			// Should do something?
+			add_filter( 'site_status_tests', array( $this, 'add_site_status_not_working' ) );
 			return;
 		}
 		add_action( 'using_block_function', array( $this, 'log' ) );
@@ -32,6 +32,14 @@ class debugCompat {
 		add_filter( 'site_status_tests', array( $this, 'add_site_status_tests' ) );
 		register_deactivation_hook( __FILE__ , array( $this, 'clean_options' ) );
 		register_uninstall_hook( __FILE__ , array( __CLASS__, 'clean_options' ) );
+	}
+
+	public function add_site_status_not_working( $tests ) {
+		$tests['direct']['dc_not_working'] = array(
+			'label' => esc_html__( 'Debug Compat plugin is not working', 'debug-compat' ),
+			'test'  => array( $this, 'not_working' ),
+		);
+		return $tests;
 	}
 
 	public function add_site_status_tests( $tests ) {
@@ -46,13 +54,35 @@ class debugCompat {
 		return $tests;
 	}
 
+	public function not_working() {
+		$descritpion = esc_html__('Debug compat requires Block Compatibility set to Troubleshooting to work.', 'debug-compat');
+		$action = '<a href="' . admin_url( 'options-general.php' ) . '">';
+		$action .= esc_html__( 'Change Block Compatibility option', 'debug-compat' );
+		$action .= '</a> or <a href="' . admin_url( 'plugins.php' ) . '">';
+		$action .= esc_html__( 'disable Debug Compat plugin', 'debug-compat' );
+		$action .= '</a>.';
+
+		$result = array(
+			'label'       => esc_html__( 'Debug Compat plugin is not working', 'debug-compat' ),
+			'status'      => 'critical',
+			'badge'       => array(
+				'label' => 'Plugin',
+				'color' => 'red',
+			),
+			'description' => $descritpion,
+			'actions'     => $action,
+			'test'        => 'dc_plugins_blocks',
+		);
+		return $result;
+	}
+
 	public function test_plugin() {
 		$options = $this->get_options();
 		$result = array(
 			'label'       => esc_html__( 'Plugins using block functions', 'debug-compat' ),
 			'status'      => 'good',
 			'badge'       => array(
-				'label' => 'compatibility',
+				'label' => 'Compatibility',
 				'color' => 'blue',
 			),
 			'description' => sprintf(
@@ -71,7 +101,7 @@ class debugCompat {
 			'label'       => esc_html__( 'Plugins using block functions', 'debug-compat' ),
 			'status'      => 'recommended',
 			'badge'       => array(
-				'label' => 'compatibility',
+				'label' => 'Compatibility',
 				'color' => 'orange',
 			),
 			'description' => $this->list_items( $options, 'plugins' ),
@@ -87,7 +117,7 @@ class debugCompat {
 			'label'       => esc_html__( 'Themes using block functions', 'debug-compat' ),
 			'status'      => 'good',
 			'badge'       => array(
-				'label' => 'compatibility',
+				'label' => 'Compatibility',
 				'color' => 'blue',
 			),
 			'description' => sprintf(
@@ -107,7 +137,7 @@ class debugCompat {
 			'label'       => esc_html__( 'Themes using block functions', 'debug-compat' ),
 			'status'      => 'recommended',
 			'badge'       => array(
-				'label' => 'compatibility',
+				'label' => 'Compatibility',
 				'color' => 'orange',
 			),
 			'description' => $this->list_items( $options, 'themes' ) . $this->list_items( $options, 'parent_themes' ),
@@ -212,7 +242,7 @@ class debugCompat {
 	}
 
 	public static function clean_options() {
-		// delete_option( 'dc_options' );
+		delete_option( 'dc_options' );
 	}
 
 }
