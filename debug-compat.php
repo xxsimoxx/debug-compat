@@ -3,7 +3,7 @@
  * Plugin Name:          Debug Compat
  * Plugin URI:           https://github.com/ClassicPress/debug-compat
  * Description:          Add Block Compatibility informations to Site Health.
- * Version:              0.0.4
+ * Version:              0.0.5
  * License:              GPL2
  * License URI:          https://www.gnu.org/licenses/gpl-2.0.html
  * Author:               ClassicPress
@@ -33,6 +33,38 @@ class DebugCompat {
 
 		add_action( 'using_block_function', array( $this, 'log' ) );
 		add_filter( 'site_status_tests', array( $this, 'add_site_status_tests' ) );
+		add_filter( 'debug_information', array( $this, 'add_debug_information' ) );
+	}
+
+	public function add_debug_information( $args ) {
+		$options = $this->get_options();
+
+		$item_types = array(
+			'plugins' => 'Plugin',
+			'themes' => 'Theme',
+			'parent_themes' => 'Parent Theme',
+		);
+
+		$fields = array();
+		foreach ( $item_types as $key => $description ) {
+			foreach ( $options['data'][$key] as $item => $value ){
+				$functions = wp_kses( $this->implode( $value ) . '.', array() );
+				$fields[ $item ] = array(
+					'label' => $description . ': ' . $item,
+					'value' => wp_kses( $this->implode( $value ) . '.', array() ),
+					'debug' => 'Plugin uses ' . wp_kses( $this->implode( $value ) . '.', array() ),
+				);
+			}
+		}
+
+		$args['dc-blocks'] = array(
+			'label' => esc_html__( 'Block Compatibility', 'debug-compat' ),
+			'description' => esc_html__( 'Plugins and themes using block functions.', 'debug-compat' ),
+			'show_count' => true,
+			'fields' => $fields,
+		);
+
+		return $args;
 	}
 
 	public function add_site_status_not_working( $tests ) {
