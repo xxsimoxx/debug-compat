@@ -22,16 +22,17 @@ class DebugCompat {
 
 	public function __construct() {
 		add_action( 'update_option_blocks_compatibility_level', array( $this, 'clean_options' ), 10, 2 );
+		register_deactivation_hook( __FILE__ , array( $this, 'clean_options' ) );
+		register_uninstall_hook( __FILE__ , array( __CLASS__, 'clean_options' ) );
+
 		$blocks_compatibility_level = (int) get_option( 'blocks_compatibility_level', 1 );
 		if ( $blocks_compatibility_level !== 2 ) {
 			add_filter( 'site_status_tests', array( $this, 'add_site_status_not_working' ) );
 			return;
 		}
+
 		add_action( 'using_block_function', array( $this, 'log' ) );
-		add_action( 'admin_menu', array( $this, 'create_menu' ), 100 ); // To be deleted
 		add_filter( 'site_status_tests', array( $this, 'add_site_status_tests' ) );
-		register_deactivation_hook( __FILE__ , array( $this, 'clean_options' ) );
-		register_uninstall_hook( __FILE__ , array( __CLASS__, 'clean_options' ) );
 	}
 
 	public function add_site_status_not_working( $tests ) {
@@ -227,31 +228,6 @@ class DebugCompat {
 		}
 
 		update_option( 'dc_options', $options );
-	}
-
-	public function render_page (){ // To be deleted
-		echo '<h1>Block Compatibility Inspector <span class="dashicons dashicons-code-standards"></span></h1>';
-
-		echo '<h2>Data (<code>dc_options</code>)</h2>';
-		echo'<pre>';
-		$options = get_option( 'dc_options' );
-		var_dump($options); // phpcs:ignore
-		echo'</pre>';
-	}
-
-
-	public function create_menu() { // To be deleted
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-		$page = add_menu_page(
-			'Debug Compat',
-			'Debug Compat',
-			'manage_options',
-			'debugcompat',
-			array( $this, 'render_page' ),
-			'dashicons-code-standards'
-		);
 	}
 
 	public static function clean_options() {
