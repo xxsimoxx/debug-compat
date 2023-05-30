@@ -2,8 +2,8 @@
 /**
  * Plugin Name:          Debug Compat
  * Plugin URI:           https://github.com/ClassicPress/debug-compat
- * Description:          Get debug information for Block Compatibility.
- * Version:              0.0.3
+ * Description:          Add Block Compatibility informations to Site Health.
+ * Version:              0.0.4
  * License:              GPL2
  * License URI:          https://www.gnu.org/licenses/gpl-2.0.html
  * Author:               ClassicPress
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die;
 }
 
-class debugCompat {
+class DebugCompat {
 
 	public function __construct() {
 		add_action( 'update_option_blocks_compatibility_level', array( $this, 'clean_options' ), 10, 2 );
@@ -159,11 +159,24 @@ class debugCompat {
 						'p' => array(),
 					)
 				),
-				 esc_html( $who ),
-				 esc_html( implode( ', ', $what ) )
+				esc_html( $who ),
+				wp_kses (
+					$this->implode( $what ),
+					array(
+						'code' => array(),
+					)
+				)
 			);
 		}
 		return $response;
+	}
+
+	private function implode( $list ) {
+		$result = '';
+		foreach ( $list as $element ) {
+			$result .= '<code>' . $element . '</code>, ';
+		}
+		return rtrim( $result, ', ' );
 	}
 
 	private function get_options() {
@@ -222,7 +235,7 @@ class debugCompat {
 		echo '<h2>Data (<code>dc_options</code>)</h2>';
 		echo'<pre>';
 		$options = get_option( 'dc_options' );
-		var_dump($options);
+		var_dump($options); // phpcs:ignore
 		echo'</pre>';
 	}
 
@@ -247,4 +260,4 @@ class debugCompat {
 
 }
 
-new debugCompat;
+new DebugCompat;
