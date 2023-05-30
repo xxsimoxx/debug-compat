@@ -22,8 +22,8 @@ class DebugCompat {
 
 	public function __construct() {
 		add_action( 'update_option_blocks_compatibility_level', array( $this, 'clean_options' ), 10, 2 );
-		register_deactivation_hook( __FILE__ , array( $this, 'clean_options' ) );
-		register_uninstall_hook( __FILE__ , array( __CLASS__, 'clean_options' ) );
+		register_deactivation_hook( __FILE__, array( $this, 'clean_options' ) );
+		register_uninstall_hook( __FILE__, array( __CLASS__, 'clean_options' ) );
 
 		$blocks_compatibility_level = (int) get_option( 'blocks_compatibility_level', 1 );
 		if ( $blocks_compatibility_level !== 2 ) {
@@ -47,12 +47,12 @@ class DebugCompat {
 
 		$fields = array();
 		foreach ( $item_types as $key => $description ) {
-			foreach ( $options['data'][$key] as $item => $value ){
+			foreach ( $options['data'][ $key ] as $item => $value ) {
 				$functions = wp_kses( $this->implode( $value ) . '.', array() );
 				$fields[ $item ] = array(
 					'label' => $description . ': ' . $item,
-					'value' => wp_kses( $this->implode( $value ) . '.', array() ),
-					'debug' => 'Plugin uses ' . wp_kses( $this->implode( $value ) . '.', array() ),
+					'value' => $functions,
+					'debug' => 'Plugin uses ' . $functions,
 				);
 			}
 		}
@@ -88,7 +88,7 @@ class DebugCompat {
 	}
 
 	public function not_working() {
-		$descritpion = esc_html__('Debug compat requires Block Compatibility set to Troubleshooting to work.', 'debug-compat');
+		$descritpion = esc_html__( 'Debug compat requires Block Compatibility set to Troubleshooting to work.', 'debug-compat' );
 		$action = '<a href="' . admin_url( 'options-general.php' ) . '">';
 		$action .= esc_html__( 'Change Block Compatibility option', 'debug-compat' );
 		$action .= '</a> or <a href="' . admin_url( 'plugins.php' ) . '">';
@@ -120,7 +120,10 @@ class DebugCompat {
 			),
 			'description' => sprintf(
 				'<p>%s</p>',
-				 esc_html__( 'No plugins are using block functions.', 'debug-compat' ),
+				esc_html__(
+					'No plugins are using block functions.',
+					'debug-compat'
+				),
 			),
 			'actions'     => '',
 			'test'        => 'dc_plugins_blocks',
@@ -155,12 +158,15 @@ class DebugCompat {
 			),
 			'description' => sprintf(
 				'<p>%s</p>',
-				 esc_html__( 'No themes are using block functions.', 'debug-compat' ),
+				esc_html__(
+					'No themes are using block functions.',
+					'debug-compat'
+				),
 			),
 			'actions'     => '',
 			'test'        => 'dc_themes_blocks',
 		);
-		$themes = array_merge(  $options['data']['themes'],  $options['data']['parent_themes'] );
+		$themes = array_merge( $options['data']['themes'], $options['data']['parent_themes'] );
 		if ( $themes === array() ) {
 			return $result;
 		}
@@ -182,7 +188,7 @@ class DebugCompat {
 
 	private function list_items( $options, $type ) {
 		$response = '';
-		foreach ( $options['data'][$type] as $who => $what ) {
+		foreach ( $options['data'][ $type ] as $who => $what ) {
 			$response .= sprintf(
 				wp_kses(
 					/* translators: %1$s is the plugin/theme name, %b$s is a comma separated list of functions */
@@ -193,7 +199,7 @@ class DebugCompat {
 					)
 				),
 				esc_html( $who ),
-				wp_kses (
+				wp_kses(
 					$this->implode( $what ),
 					array(
 						'code' => array(),
@@ -232,12 +238,12 @@ class DebugCompat {
 
 		if ( 0 === strpos( $trace[1]['file'], realpath( get_stylesheet_directory() ) ) ) {
 			// Theme
-			if( ! isset( $options['data']['themes'][ wp_get_theme()->get( 'Name' ) ] ) || ! in_array( $func, $options['data']['themes'][ wp_get_theme()->get( 'Name' ) ] ) ) {
+			if ( ! isset( $options['data']['themes'][ wp_get_theme()->get( 'Name' ) ] ) || ! in_array( $func, $options['data']['themes'][ wp_get_theme()->get( 'Name' ) ] ) ) {
 				$options['data']['themes'][ wp_get_theme()->get( 'Name' ) ][] = $func;
 			}
 		} elseif ( 0 === strpos( $trace[1]['file'], realpath( get_template_directory() ) ) ) {
 			// Child theme
-			if( ! isset( $options['data']['parent_themes'][ wp_get_theme()->parent()->get( 'Name' ) ] ) || ! in_array( $func, $options['data']['parent_themes'][ wp_get_theme()->parent()->get( 'Name' ) ] ) ) {
+			if ( ! isset( $options['data']['parent_themes'][ wp_get_theme()->parent()->get( 'Name' ) ] ) || ! in_array( $func, $options['data']['parent_themes'][ wp_get_theme()->parent()->get( 'Name' ) ] ) ) {
 				$options['data']['parent_themes'][ wp_get_theme()->parent()->get( 'Name' ) ][] = $func;
 			}
 		} else {
@@ -246,15 +252,15 @@ class DebugCompat {
 			$plugin = array_intersect( $files, $active );
 			if ( count( $plugin ) !== 1 ) {
 				// Hooked somewhere
-				if( ! in_array( $func, $options['data']['misc'] ) ) {
+				if ( ! in_array( $func, $options['data']['misc'] ) ) {
 					$options['data']['misc'][] = $func;
 				}
 			} else {
 				// Plugin
 				$plugin_data = get_plugin_data( array_pop( $plugin ) );
 				$plugin_name = $plugin_data['Name'];
-				if( ! isset( $options['data']['plugins'][$plugin_name] ) || ! in_array( $func, $options['data']['plugins'][$plugin_name] ) ) {
-					$options['data']['plugins'][$plugin_name][] = $func;
+				if ( ! isset( $options['data']['plugins'][ $plugin_name ] ) || ! in_array( $func, $options['data']['plugins'][ $plugin_name ] ) ) {
+					$options['data']['plugins'][ $plugin_name ][] = $func;
 				}
 			}
 		}
